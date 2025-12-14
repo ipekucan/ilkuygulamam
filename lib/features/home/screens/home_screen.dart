@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/color_constants.dart';
+import '../../../core/services/goal_service.dart';
 import '../../../widgets/retro_button.dart';
 import '../../profile/screens/profile_screen.dart'; // Profil sayfasına erişim
 
@@ -12,7 +13,20 @@ class WaterHomePage extends StatefulWidget {
 
 class _WaterHomePageState extends State<WaterHomePage> {
   int _currentIntake = 0;
-  final int _dailyGoal = 2500;
+  int _dailyGoal = 2500;
+  int _mlAmount = 200; // Ayarlanabilir ml miktarı
+  String _cupDesign = 'default'; // Bardak tasarımı (şimdilik kullanılmıyor)
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGoal();
+  }
+
+  Future<void> _loadGoal() async {
+    final g = await GoalService.getDailyGoal();
+    setState(() => _dailyGoal = g);
+  }
 
   void _addWater(int amount) {
     setState(() {
@@ -24,6 +38,98 @@ class _WaterHomePageState extends State<WaterHomePage> {
     setState(() {
       _currentIntake = 0;
     });
+  }
+
+  IconData _getCupIcon() {
+    switch (_cupDesign) {
+      case 'cafe':
+        return Icons.local_cafe;
+      case 'drink':
+        return Icons.local_drink;
+      case 'drop':
+        return Icons.water_drop;
+      default:
+        return Icons.water_drop;
+    }
+  }
+
+  void _showMlDialog() {
+    final TextEditingController controller = TextEditingController(text: _mlAmount.toString());
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ML Miktarı Ayarla', style: TextStyle(fontFamily: 'Courier')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'ML'),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8.0,
+              runSpacing: 8.0,
+              children: [
+                ElevatedButton(onPressed: () { setState(() => _mlAmount = 100); Navigator.pop(context); }, child: const Text('100')),
+                ElevatedButton(onPressed: () { setState(() => _mlAmount = 200); Navigator.pop(context); }, child: const Text('200')),
+                ElevatedButton(onPressed: () { setState(() => _mlAmount = 300); Navigator.pop(context); }, child: const Text('300')),
+                ElevatedButton(onPressed: () { setState(() => _mlAmount = 500); Navigator.pop(context); }, child: const Text('500')),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('İptal')),
+          TextButton(
+            onPressed: () {
+              final parsed = int.tryParse(controller.text);
+              if (parsed != null && parsed > 0) {
+                setState(() => _mlAmount = parsed);
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('Kaydet'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCupDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Bardak Tasarımı Seç', style: TextStyle(fontFamily: 'Courier')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.local_cafe, size: 40),
+                  onPressed: () { setState(() => _cupDesign = 'cafe'); Navigator.pop(context); },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.local_drink, size: 40),
+                  onPressed: () { setState(() => _cupDesign = 'drink'); Navigator.pop(context); },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.water_drop, size: 40),
+                  onPressed: () { setState(() => _cupDesign = 'drop'); Navigator.pop(context); },
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Tamam')),
+        ],
+      ),
+    );
   }
 
   @override
@@ -48,11 +154,13 @@ class _WaterHomePageState extends State<WaterHomePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.person, color: AppColors.text),
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const ProfileScreen()),
               );
+              // reload goal in case it was changed in profile
+              _loadGoal();
             },
           ),
         ],
@@ -73,7 +181,7 @@ class _WaterHomePageState extends State<WaterHomePage> {
               ),
               child: Column(
                 children: [
-                  const Icon(Icons.water_drop, size: 60, color: AppColors.border),
+                  Icon(_getCupIcon(), size: 60, color: AppColors.border),
                   const SizedBox(height: 10),
                   const Text("GÜNLÜK HEDEF", style: TextStyle(fontFamily: 'Courier', fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 5),
@@ -126,19 +234,32 @@ class _WaterHomePageState extends State<WaterHomePage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    RetroButton(
-                      label: "+200 ml",
-                      color: AppColors.secondary,
-                      icon: Icons.local_cafe,
-                      onTap: () => _addWater(200),
+                    Expanded(
+                      child: RetroButton(
+                        label: "ML\n($_mlAmount)",
+                        color: AppColors.secondary,
+                        icon: Icons.settings,
+                        onTap: _showMlDialog,
+                      ),
                     ),
-                    RetroButton(
-                      label: "+500 ml",
-                      color: AppColors.primary,
-                      icon: Icons.local_drink,
-                      onTap: () => _addWater(500),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: RetroButton(
+                        label: "BARDAK",
+                        color: AppColors.primary,
+                        icon: _getCupIcon(),
+                        onTap: _showCupDialog,
+                      ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 20),
+                RetroButton(
+                  label: "+ SU EKLE",
+                  color: AppColors.accent,
+                  icon: Icons.add,
+                  isWide: true,
+                  onTap: () => _addWater(_mlAmount),
                 ),
                 const SizedBox(height: 20),
                 RetroButton(

@@ -22,8 +22,7 @@ class RetroButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: isWide ? double.infinity : 140,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        width: isWide ? double.infinity : 140,          height: 60, // Sabit yükseklik ekledim, eşit boyut için        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
           color: color,
           border: Border.all(color: AppColors.border, width: 3),
@@ -39,6 +38,8 @@ class RetroButton extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               label,
+              softWrap: true,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
